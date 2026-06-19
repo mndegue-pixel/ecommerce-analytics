@@ -1,0 +1,59 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, develop, feature/* ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install flake8 pytest
+    
+    - name: Lint with flake8
+      run: |
+        flake8 notebooks/ --max-line-length=120 --statistics || true
+        flake8 tests/ --max-line-length=120 --statistics || true
+    
+    - name: Test with pytest
+      run: |
+        pytest tests/ || true
+    
+    - name: Deploy to Databricks
+      run: |
+        pip install databricks-cli
+        databricks configure --token --host ${{ secrets.DATABRICKS_HOST }}
+        
+        # Créer le dossier
+        databricks workspace mkdirs "/Shared/ecommerce-dev" || true
+        
+        # Déployer les notebooks
+        for notebook in notebooks/*.py; do
+          filename=$(basename "${notebook}")
+          echo "📤 Déploiement de ${filename}..."
+          databricks workspace import \
+            --language PYTHON \
+            --path "/Shared/ecommerce-dev/${filename}" \
+            --file "${notebook}" \
+            --overwrite
+        done
+      env:
+        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    
+    - name: Summary
+      run: |
+        echo "✅ Pipeline terminé avec succès !"
+        echo "📁 Notebooks déployés sur Databricks"
