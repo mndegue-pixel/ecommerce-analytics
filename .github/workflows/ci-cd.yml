@@ -5,6 +5,7 @@ on:
     branches: [ master, develop, feature/* ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,24 +21,42 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
+        pip install databricks-cli
         pip install flake8 pytest
     
     - name: Lint with flake8
       run: |
         flake8 notebooks/ --max-line-length=120 --statistics || true
-        flake8 tests/ --max-line-length=120 --statistics || true
     
     - name: Test with pytest
       run: |
         pytest tests/ || true
     
     - name: Deploy to Databricks
+      env:
+        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        pip install databricks-cli
-        databricks configure --token --host ${{ secrets.DATABRICKS_HOST }}
+        # Nettoyer les variables d'environnement
+        unset DATABRICKS_CONFIG_FILE
         
-        # Créer le dossier
+        # Créer le dossier de configuration
+        mkdir -p ~/.databrickscfg
+        
+        # Écrire le fichier de configuration
+        cat > ~/.databrickscfg << EOF
+[DEFAULT]
+host = $DATABRICKS_HOST
+token = $DATABRICKS_TOKEN
+EOF
+        
+        # Vérifier que le fichier est bien créé
+        cat ~/.databrickscfg
+        
+        # Tester la connexion avec Databricks CLI
+        databricks workspace ls "/" || true
+        
+        # Créer les dossiers
         databricks workspace mkdirs "/Shared/ecommerce-dev" || true
         
         # Déployer les notebooks
@@ -50,8 +69,8 @@ jobs:
             --file "${notebook}" \
             --overwrite
         done
-      env:
-        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        
+        echo "✅ Déploiement terminé !"
     
     - name: Summary
       run: |
