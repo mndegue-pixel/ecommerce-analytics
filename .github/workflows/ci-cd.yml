@@ -48,14 +48,14 @@ jobs:
       run: |
         export PATH="$HOME/.databricks/bin:$PATH"
         
-        # Configurer la connexion
-        databricks configure --host $DATABRICKS_HOST --token $DATABRICKS_TOKEN
+        # Créer un profil de connexion
+        databricks auth login --host $DATABRICKS_HOST --token $DATABRICKS_TOKEN
         
         # Créer les dossiers
         echo "📁 Création du dossier /Shared/ecommerce-dev..."
         databricks workspace mkdirs /Shared/ecommerce-dev || true
         
-        # Déployer les notebooks (syntaxe de la nouvelle CLI)
+        # Déployer les notebooks
         echo "📤 Déploiement des notebooks..."
         for notebook in notebooks/*.py; do
           filename=$(basename "${notebook}")
@@ -65,7 +65,7 @@ jobs:
             --language PYTHON \
             --overwrite \
             /Shared/ecommerce-dev/${filename} \
-            ${notebook}
+            --file "${notebook}"
         done
         
         echo "✅ Déploiement terminé avec succès !"
