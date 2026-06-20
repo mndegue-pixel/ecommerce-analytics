@@ -48,10 +48,10 @@ jobs:
       run: |
         export PATH="$HOME/.databricks/bin:$PATH"
         
-        # Créer le dossier de configuration
-        mkdir -p ~/.databrickscfg
+        # Supprimer l'ancien dossier de configuration s'il existe
+        rm -rf ~/.databrickscfg
         
-        # Écrire le fichier de configuration
+        # Créer le fichier de configuration
         echo "[DEFAULT]" > ~/.databrickscfg
         echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
         echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
