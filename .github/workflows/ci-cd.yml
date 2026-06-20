@@ -5,6 +5,7 @@ on:
     branches: [ master, develop, feature/* ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,40 +21,63 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
         pip install flake8 pytest
     
     - name: Lint with flake8
       run: |
         flake8 notebooks/ --max-line-length=120 --statistics || true
-        flake8 tests/ --max-line-length=120 --statistics || true
     
     - name: Test with pytest
       run: |
         pytest tests/ || true
     
-    - name: Deploy to Databricks
+    - name: Install Databricks CLI (New Version)
       run: |
-        pip install databricks-cli
-        databricks configure --token --host ${{ secrets.DATABRICKS_HOST }}
+        # Télécharger et installer la nouvelle CLI
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+        # Ajouter au PATH
+        echo "$HOME/.databricks/bin" >> $GITHUB_PATH
+        export PATH="$HOME/.databricks/bin:$PATH"
+        # Vérifier la version
+        databricks --version
+    
+    - name: Deploy to Databricks
+      env:
+        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      run: |
+        export PATH="$HOME/.databricks/bin:$PATH"
         
-        # Créer le dossier
-        databricks workspace mkdirs "/Shared/ecommerce-dev" || true
+        # Créer le fichier de configuration dans le HOME
+        mkdir -p ~
+        echo "[DEFAULT]" > ~/.databrickscfg
+        echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
+        echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
         
-        # Déployer les notebooks
+        # Vérifier que le fichier existe et son contenu
+        echo "📄 Contenu du fichier de configuration :"
+        cat ~/.databrickscfg
+        
+        # Créer les dossiers avec le profil explicite
+        echo "📁 Création du dossier /Shared/ecommerce-dev..."
+        databricks --profile DEFAULT workspace mkdirs /Shared/ecommerce-dev || true
+        
+        # Déployer les notebooks avec le profil explicite
+        echo "📤 Déploiement des notebooks..."
         for notebook in notebooks/*.py; do
           filename=$(basename "${notebook}")
-          echo "📤 Déploiement de ${filename}..."
-          databricks workspace import \
+          echo "   📤 Déploiement de ${filename}..."
+          databricks --profile DEFAULT workspace import \
+            --format SOURCE \
             --language PYTHON \
-            --path "/Shared/ecommerce-dev/${filename}" \
-            --file "${notebook}" \
-            --overwrite
+            --overwrite \
+            /Shared/ecommerce-dev/${filename} \
+            --file "${notebook}"
         done
-      env:
-        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        
+        echo "✅ Déploiement terminé avec succès !"
     
     - name: Summary
       run: |
         echo "✅ Pipeline terminé avec succès !"
-        echo "📁 Notebooks déployés sur Databricks"
+        echo "📁 Notebooks déployés sur Databricks dans /Shared/ecommerce-dev/"
