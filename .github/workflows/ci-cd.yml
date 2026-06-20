@@ -48,17 +48,24 @@ jobs:
       run: |
         export PATH="$HOME/.databricks/bin:$PATH"
         
-        # Supprimer l'ancien fichier de configuration
-        rm -f ~/.databrickscfg
+        # Créer un dossier temporaire pour la configuration
+        mkdir -p /tmp/databricks_config
         
-        # Créer le fichier de configuration avec echo
-        echo "[DEFAULT]" > ~/.databrickscfg
-        echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
-        echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
+        # Créer le fichier de configuration
+        echo "[DEFAULT]" > /tmp/databricks_config/.databrickscfg
+        echo "host = $DATABRICKS_HOST" >> /tmp/databricks_config/.databrickscfg
+        echo "token = $DATABRICKS_TOKEN" >> /tmp/databricks_config/.databrickscfg
+        
+        # FORCER la CLI à utiliser ce fichier
+        export DATABRICKS_CONFIG_FILE="/tmp/databricks_config/.databrickscfg"
         
         # Vérifier le contenu du fichier
         echo "📄 Contenu du fichier de configuration :"
-        cat ~/.databrickscfg
+        cat $DATABRICKS_CONFIG_FILE
+        
+        # Tester la connexion
+        echo "🔍 Test de connexion..."
+        databricks workspace ls / || echo "⚠️ Connexion testée"
         
         # Créer les dossiers
         echo "📁 Création du dossier /Shared/ecommerce-dev..."
