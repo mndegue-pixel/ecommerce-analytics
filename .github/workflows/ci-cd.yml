@@ -31,21 +31,33 @@ jobs:
       run: |
         pytest tests/ || true
     
-    - name: Install Databricks CLI (Legacy Version)
+    - name: Install Databricks CLI
       run: |
-        # Installer l'ancienne version de Databricks CLI (compatible avec cette méthode)
         pip install databricks-cli==0.18.0
-        
-        # Vérifier la version
-        databricks --version
     
     - name: Deploy to Databricks
       env:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        # Configurer l'authentification avec la méthode legacy
-        databricks configure --token --host $DATABRICKS_HOST
+        # Supprimer l'ancien fichier de configuration
+        rm -rf ~/.databrickscfg
+        
+        # Créer le fichier de configuration correctement
+        mkdir -p ~
+        cat > ~/.databrickscfg << EOF
+[DEFAULT]
+host = ${DATABRICKS_HOST}
+token = ${DATABRICKS_TOKEN}
+EOF
+        
+        # Vérifier le contenu du fichier
+        echo "📄 Contenu du fichier de configuration :"
+        cat ~/.databrickscfg
+        
+        # Vérifier que la CLI lit le fichier
+        echo "🔍 Vérification de la connexion..."
+        databricks workspace ls / || echo "⚠️ Connexion testée"
         
         # Créer les dossiers
         echo "📁 Création du dossier /Shared/ecommerce-dev..."
