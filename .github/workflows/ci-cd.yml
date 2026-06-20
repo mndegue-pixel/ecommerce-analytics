@@ -31,47 +31,42 @@ jobs:
       run: |
         pytest tests/ || true
     
-    - name: Install Databricks CLI
+    - name: Install Databricks CLI (New Version)
       run: |
-        pip install databricks-cli==0.18.0
+        # Télécharger et installer la nouvelle CLI
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+        # Ajouter au PATH
+        echo "$HOME/.databricks/bin" >> $GITHUB_PATH
+        export PATH="$HOME/.databricks/bin:$PATH"
+        # Vérifier la version
+        databricks --version
     
     - name: Deploy to Databricks
       env:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        # Supprimer l'ancien fichier de configuration
-        rm -f ~/.databrickscfg
-
-        # ✅ CORRECTION : écrire le fichier SANS heredoc
-        # Les variables $DATABRICKS_HOST et $DATABRICKS_TOKEN
-        # sont des variables bash (env:) — on les écrit directement
-        echo "[DEFAULT]" > ~/.databrickscfg
-        echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
-        echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
-
-        # Vérifier le contenu du fichier
-        echo "📄 Contenu du fichier de configuration :"
-        cat ~/.databrickscfg
+        export PATH="$HOME/.databricks/bin:$PATH"
         
-        # Vérifier la connexion
-        echo "🔍 Vérification de la connexion..."
-        databricks workspace ls / || echo "⚠️ Connexion testée"
+        # Configurer l'authentification avec la nouvelle CLI
+        # La nouvelle CLI utilise des profils
+        databricks configure --host $DATABRICKS_HOST --token $DATABRICKS_TOKEN
         
-        # Créer le dossier de destination
+        # Créer les dossiers (nouvelle syntaxe)
         echo "📁 Création du dossier /Shared/ecommerce-dev..."
-        databricks workspace mkdirs "/Shared/ecommerce-dev" || true
+        databricks workspace mkdirs /Shared/ecommerce-dev || true
         
-        # Déployer les notebooks
+        # Déployer les notebooks (nouvelle syntaxe)
         echo "📤 Déploiement des notebooks..."
         for notebook in notebooks/*.py; do
           filename=$(basename "${notebook}")
           echo "   📤 Déploiement de ${filename}..."
           databricks workspace import \
+            --format SOURCE \
             --language PYTHON \
-            --path "/Shared/ecommerce-dev/${filename}" \
-            --file "${notebook}" \
-            --overwrite
+            --overwrite \
+            /Shared/ecommerce-dev/${filename} \
+            --file "${notebook}"
         done
         
         echo "✅ Déploiement terminé avec succès !"
