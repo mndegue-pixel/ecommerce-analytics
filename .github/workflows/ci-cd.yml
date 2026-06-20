@@ -31,41 +31,52 @@ jobs:
       run: |
         pytest tests/ || true
     
-    - name: Install Databricks CLI (nouvelle version)
+    - name: Install Databricks CLI (New Version)
       run: |
-        # ✅ Nouvelle CLI Databricks (v0.200+) — remplace l'ancienne dépréciée
+        # Télécharger et installer la nouvelle CLI
         curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-        databricks version
+        # Ajouter au PATH
+        echo "$HOME/.databricks/bin" >> $GITHUB_PATH
+        export PATH="$HOME/.databricks/bin:$PATH"
+        # Vérifier la version
+        databricks --version
     
     - name: Deploy to Databricks
       env:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        # ✅ Nouvelle syntaxe de config — variables d'environnement directes
-        # La nouvelle CLI lit DATABRICKS_HOST et DATABRICKS_TOKEN automatiquement
-        # Pas besoin de fichier ~/.databrickscfg !
+        export PATH="$HOME/.databricks/bin:$PATH"
         
-        # Vérifier la connexion
-        echo "🔍 Vérification de la connexion..."
-        databricks workspace list / || echo "⚠️ Connexion testée"
+        # Créer le dossier de configuration
+        mkdir -p ~/.databrickscfg
         
-        # Créer le dossier de destination
+        # Écrire le fichier de configuration
+        cat > ~/.databrickscfg << EOF
+[DEFAULT]
+host = ${DATABRICKS_HOST}
+token = ${DATABRICKS_TOKEN}
+EOF
+        
+        # Vérifier le contenu du fichier
+        echo "📄 Contenu du fichier de configuration :"
+        cat ~/.databrickscfg
+        
+        # Créer les dossiers
         echo "📁 Création du dossier /Shared/ecommerce-dev..."
         databricks workspace mkdirs /Shared/ecommerce-dev || true
         
         # Déployer les notebooks
         echo "📤 Déploiement des notebooks..."
         for notebook in notebooks/*.py; do
-          filename=$(basename "${notebook}" .py)
+          filename=$(basename "${notebook}")
           echo "   📤 Déploiement de ${filename}..."
-          
-          # ✅ Nouvelle syntaxe : SOURCE_PATH puis TARGET_PATH (pas de --path)
           databricks workspace import \
-            "${notebook}" \
-            "/Shared/ecommerce-dev/${filename}" \
+            --format SOURCE \
             --language PYTHON \
-            --overwrite
+            --overwrite \
+            /Shared/ecommerce-dev/${filename} \
+            --file "${notebook}"
         done
         
         echo "✅ Déploiement terminé avec succès !"
@@ -73,4 +84,4 @@ jobs:
     - name: Summary
       run: |
         echo "✅ Pipeline terminé avec succès !"
-        echo "📁 Notebooks déployés dans /Shared/ecommerce-dev/"
+        echo "📁 Notebooks déployés sur Databricks dans /Shared/ecommerce-dev/"
