@@ -1,64 +1,47 @@
-name: CI/CD Pipeline
-
-on:
-  push:
-    branches: [ master, develop, feature/* ]
-  pull_request:
-    branches: [ master ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: Install dependencies
-      run: |
-        pip install databricks-cli
-        pip install flake8 pytest
-    
-    - name: Lint with flake8
-      run: |
-        flake8 notebooks/ --max-line-length=120 --statistics || true
-    
-    - name: Test with pytest
-      run: |
-        pytest tests/ || true
-    
-    - name: Deploy to Databricks
-      env:
-        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-      run: |
-        # Utiliser les variables d'environnement directement
-        export DATABRICKS_HOST="$DATABRICKS_HOST"
-        export DATABRICKS_TOKEN="$DATABRICKS_TOKEN"
-        
-        # Tester la connexion
-        echo "🔍 Test de connexion à Databricks..."
-        databricks workspace ls "/" || echo "⚠️ Connexion testée"
-        
-        # Créer les dossiers dans Databricks
-        echo "📁 Création du dossier /Shared/ecommerce-dev..."
-        databricks workspace mkdirs "/Shared/ecommerce-dev" || true
-        
-        # Déployer les notebooks
-        echo "📤 Déploiement des notebooks..."
-        for notebook in notebooks/*.py; do
-          filename=$(basename "${notebook}")
-          echo "   📤 Déploiement de ${filename}..."
-          databricks workspace import \
-            --language PYTHON \
-            --path "/Shared/ecommerce-dev/${filename}" \
-            --file "${notebook}" \
-            --overwrite
-        done
-        
-        echo "✅ Déploiement terminé avec succès !"
+- name: Deploy to Databricks
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+run: |
+  # Créer un dossier temporaire pour la configuration
+  mkdir -p /tmp/databricks_config
+  cd /tmp/databricks_config
+  
+  # Écrire le fichier de configuration
+  cat > .databrickscfg << 'EOF'
+[DEFAULT]
+host = $DATABRICKS_HOST
+token = $DATABRICKS_TOKEN
+EOF
+  
+  # Remplacer les variables dans le fichier
+  sed -i "s/\$DATABRICKS_HOST/${DATABRICKS_HOST}/g" .databrickscfg
+  sed -i "s/\$DATABRICKS_TOKEN/${DATABRICKS_TOKEN}/g" .databrickscfg
+  
+  # Utiliser ce fichier de configuration
+  export DATABRICKS_CONFIG_FILE="/tmp/databricks_config/.databrickscfg"
+  
+  # Vérifier le contenu
+  cat $DATABRICKS_CONFIG_FILE
+  
+  # Revenir au dossier du projet
+  cd -
+  
+  # Tester la connexion
+  databricks workspace ls "/" || echo "⚠️ Connexion testée"
+  
+  # Créer les dossiers
+  databricks workspace mkdirs "/Shared/ecommerce-dev" || true
+  
+  # Déployer les notebooks
+  for notebook in notebooks/*.py; do
+    filename=$(basename "${notebook}")
+    echo "📤 Déploiement de ${filename}..."
+    databricks workspace import \
+      --language PYTHON \
+      --path "/Shared/ecommerce-dev/${filename}" \
+      --file "${notebook}" \
+      --overwrite
+  done
+  
+  echo "✅ Déploiement terminé !"
