@@ -45,11 +45,15 @@ jobs:
         
         # Créer le fichier de configuration correctement
         mkdir -p ~
-        cat > ~/.databrickscfg << EOF
-[DEFAULT]
-host = ${DATABRICKS_HOST}
-token = ${DATABRICKS_TOKEN}
-EOF
+        cat > ~/.databrickscfg << "EOF"
+        [DEFAULT]
+        host = $DATABRICKS_HOST
+        token = $DATABRICKS_TOKEN
+        EOF
+        
+        # Remplacer les variables dans le fichier
+        sed -i "s|\$DATABRICKS_HOST|${DATABRICKS_HOST}|g" ~/.databrickscfg
+        sed -i "s|\$DATABRICKS_TOKEN|${DATABRICKS_TOKEN}|g" ~/.databrickscfg
         
         # Vérifier le contenu du fichier
         echo "📄 Contenu du fichier de configuration :"
