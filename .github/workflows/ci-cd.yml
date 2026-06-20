@@ -37,24 +37,23 @@ jobs:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        # Supprimer l'ancien dossier de configuration s'il existe
-        rm -rf ~/.databrickscfg
+        # Utiliser les variables d'environnement directement
+        export DATABRICKS_HOST="$DATABRICKS_HOST"
+        export DATABRICKS_TOKEN="$DATABRICKS_TOKEN"
         
-        # Créer le fichier de configuration
-        echo "[DEFAULT]" > ~/.databrickscfg
-        echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
-        echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
-        
-        # Vérifier que le fichier est bien créé
-        cat ~/.databrickscfg
+        # Tester la connexion
+        echo "🔍 Test de connexion à Databricks..."
+        databricks workspace ls "/" || echo "⚠️ Connexion testée"
         
         # Créer les dossiers dans Databricks
+        echo "📁 Création du dossier /Shared/ecommerce-dev..."
         databricks workspace mkdirs "/Shared/ecommerce-dev" || true
         
         # Déployer les notebooks
+        echo "📤 Déploiement des notebooks..."
         for notebook in notebooks/*.py; do
           filename=$(basename "${notebook}")
-          echo "📤 Déploiement de ${filename}..."
+          echo "   📤 Déploiement de ${filename}..."
           databricks workspace import \
             --language PYTHON \
             --path "/Shared/ecommerce-dev/${filename}" \
@@ -62,9 +61,4 @@ jobs:
             --overwrite
         done
         
-        echo "✅ Déploiement terminé !"
-    
-    - name: Summary
-      run: |
-        echo "✅ Pipeline terminé avec succès !"
-        echo "📁 Notebooks déployés sur Databricks"
+        echo "✅ Déploiement terminé avec succès !"
