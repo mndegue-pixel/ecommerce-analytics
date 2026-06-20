@@ -31,7 +31,7 @@ jobs:
       run: |
         pytest tests/ || true
     
-    - name: Install Databricks CLI (New Version)
+    - name: Install Databricks CLI
       run: |
         # Télécharger et installer la nouvelle version de Databricks CLI
         curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -48,8 +48,16 @@ jobs:
       run: |
         export PATH="$HOME/.databricks/bin:$PATH"
         
-        # Créer un profil de connexion
-        databricks auth login --host $DATABRICKS_HOST --token $DATABRICKS_TOKEN
+        # Créer le dossier de configuration
+        mkdir -p ~/.databrickscfg
+        
+        # Écrire le fichier de configuration
+        echo "[DEFAULT]" > ~/.databrickscfg
+        echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
+        echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
+        
+        # Vérifier le fichier
+        cat ~/.databrickscfg
         
         # Créer les dossiers
         echo "📁 Création du dossier /Shared/ecommerce-dev..."
