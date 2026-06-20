@@ -37,24 +37,16 @@ jobs:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        # Nettoyer les variables d'environnement
-        unset DATABRICKS_CONFIG_FILE
-        
         # Créer le dossier de configuration
         mkdir -p ~/.databrickscfg
         
-        # Écrire le fichier de configuration
-        cat > ~/.databrickscfg << EOF
-[DEFAULT]
-host = $DATABRICKS_HOST
-token = $DATABRICKS_TOKEN
-EOF
+        # Écrire le fichier de configuration (version compatible GitHub Actions)
+        echo "[DEFAULT]" > ~/.databrickscfg
+        echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
+        echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
         
         # Vérifier que le fichier est bien créé
         cat ~/.databrickscfg
-        
-        # Tester la connexion avec Databricks CLI
-        databricks workspace ls "/" || true
         
         # Créer les dossiers
         databricks workspace mkdirs "/Shared/ecommerce-dev" || true
