@@ -21,7 +21,6 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install databricks-cli
         pip install flake8 pytest
     
     - name: Lint with flake8
@@ -32,43 +31,41 @@ jobs:
       run: |
         pytest tests/ || true
     
+    - name: Install Databricks CLI (New Version)
+      run: |
+        # Télécharger et installer la nouvelle version de Databricks CLI
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+        echo "$HOME/.databricks/bin" >> $GITHUB_PATH
+        export PATH="$HOME/.databricks/bin:$PATH"
+        
+        # Vérifier la version
+        databricks --version
+    
     - name: Deploy to Databricks
       env:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        echo "🔍 Test de connexion à Databricks..."
+        export PATH="$HOME/.databricks/bin:$PATH"
         
-        # Créer un dossier temporaire pour la configuration
-        mkdir -p /tmp/databricks_config
+        # Configurer la connexion
+        databricks configure --host $DATABRICKS_HOST --token $DATABRICKS_TOKEN
         
-        # Écrire le fichier de configuration
-        cat > /tmp/databricks_config/.databrickscfg << EOF
-        [DEFAULT]
-        host = ${DATABRICKS_HOST}
-        token = ${DATABRICKS_TOKEN}
-        EOF
-        
-        # Utiliser ce fichier de configuration
-        export DATABRICKS_CONFIG_FILE="/tmp/databricks_config/.databrickscfg"
-        
-        # Vérifier le contenu
-        cat ${DATABRICKS_CONFIG_FILE}
-        
-        # Créer les dossiers dans Databricks
+        # Créer les dossiers
         echo "📁 Création du dossier /Shared/ecommerce-dev..."
-        databricks workspace mkdirs "/Shared/ecommerce-dev" || true
+        databricks workspace mkdirs /Shared/ecommerce-dev || true
         
-        # Déployer les notebooks
+        # Déployer les notebooks (syntaxe de la nouvelle CLI)
         echo "📤 Déploiement des notebooks..."
         for notebook in notebooks/*.py; do
           filename=$(basename "${notebook}")
           echo "   📤 Déploiement de ${filename}..."
           databricks workspace import \
+            --format SOURCE \
             --language PYTHON \
-            --path "/Shared/ecommerce-dev/${filename}" \
-            --file "${notebook}" \
-            --overwrite
+            --overwrite \
+            /Shared/ecommerce-dev/${filename} \
+            ${notebook}
         done
         
         echo "✅ Déploiement terminé avec succès !"
@@ -76,4 +73,4 @@ jobs:
     - name: Summary
       run: |
         echo "✅ Pipeline terminé avec succès !"
-        echo "📁 Notebooks déployés sur Databricks"
+        echo "📁 Notebooks déployés sur Databricks dans /Shared/ecommerce-dev/"
