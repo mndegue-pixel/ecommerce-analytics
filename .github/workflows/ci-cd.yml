@@ -31,12 +31,10 @@ jobs:
       run: |
         pytest tests/ || true
     
-    - name: Install Databricks CLI
+    - name: Install Databricks CLI (Legacy Version)
       run: |
-        # Télécharger et installer la nouvelle version de Databricks CLI
-        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-        echo "$HOME/.databricks/bin" >> $GITHUB_PATH
-        export PATH="$HOME/.databricks/bin:$PATH"
+        # Installer l'ancienne version de Databricks CLI (compatible avec cette méthode)
+        pip install databricks-cli==0.18.0
         
         # Vérifier la version
         databricks --version
@@ -46,22 +44,12 @@ jobs:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        export PATH="$HOME/.databricks/bin:$PATH"
-        
-        # Supprimer l'ancien dossier de configuration s'il existe
-        rm -rf ~/.databrickscfg
-        
-        # Créer le fichier de configuration
-        echo "[DEFAULT]" > ~/.databrickscfg
-        echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
-        echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
-        
-        # Vérifier le fichier
-        cat ~/.databrickscfg
+        # Configurer l'authentification avec la méthode legacy
+        databricks configure --token --host $DATABRICKS_HOST
         
         # Créer les dossiers
         echo "📁 Création du dossier /Shared/ecommerce-dev..."
-        databricks workspace mkdirs /Shared/ecommerce-dev || true
+        databricks workspace mkdirs "/Shared/ecommerce-dev" || true
         
         # Déployer les notebooks
         echo "📤 Déploiement des notebooks..."
@@ -69,11 +57,10 @@ jobs:
           filename=$(basename "${notebook}")
           echo "   📤 Déploiement de ${filename}..."
           databricks workspace import \
-            --format SOURCE \
             --language PYTHON \
-            --overwrite \
-            /Shared/ecommerce-dev/${filename} \
-            --file "${notebook}"
+            --path "/Shared/ecommerce-dev/${filename}" \
+            --file "${notebook}" \
+            --overwrite
         done
         
         echo "✅ Déploiement terminé avec succès !"
