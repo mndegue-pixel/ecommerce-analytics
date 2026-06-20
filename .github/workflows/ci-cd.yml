@@ -37,10 +37,10 @@ jobs:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        # Créer le dossier de configuration
-        mkdir -p ~/.databrickscfg
+        # Supprimer l'ancien dossier de configuration s'il existe
+        rm -rf ~/.databrickscfg
         
-        # Écrire le fichier de configuration (version compatible GitHub Actions)
+        # Créer le fichier de configuration
         echo "[DEFAULT]" > ~/.databrickscfg
         echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
         echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
@@ -48,7 +48,7 @@ jobs:
         # Vérifier que le fichier est bien créé
         cat ~/.databrickscfg
         
-        # Créer les dossiers
+        # Créer les dossiers dans Databricks
         databricks workspace mkdirs "/Shared/ecommerce-dev" || true
         
         # Déployer les notebooks
