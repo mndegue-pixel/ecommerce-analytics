@@ -1,0 +1,25 @@
+=== RAPPORT DE VALIDATION POST-MIGRATION ===
+Date : [À remplir par la date d'exécution]
+Environnement : Azure Databricks
+
+--- RÈGLES DE VALIDATION ---
+
+1. Validation de Volume
+   - Bronze : [nombre] lignes
+   - Silver : [nombre] lignes
+   - Résultat : ✅ SUCCÈS / ⚠️ Écart contrôlé
+
+2. Validation de Montant (Somme de contrôle)
+   - Bronze : [montant] €
+   - Silver : [montant] €
+   - Résultat : ✅ SUCCÈS / ⚠️ Écart contrôlé
+
+3. Validation d'Intégrité (Clés primaires)
+   - Lignes avec ID_Carte null : [nombre]
+   - Résultat : ✅ SUCCÈS / ❌ ÉCHEC
+
+4. Validation des Dates
+   - Dates futures détectées : [nombre]
+   - Résultat : ✅ SUCCÈS / ❌ ÉCHEC
+
+=== FIN DU RAPPORT ===
